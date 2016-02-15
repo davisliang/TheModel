@@ -14,17 +14,14 @@ numImages = size(data, 2);
 numScales = size(gabor,1);
 numOrientations = size(gabor,2);
 
-imageDim = size(data{1});
-
-
+image_dimensions =  size(data{1});
+multiplier = 100/image_dimensions(1);
 
 for img = 1:numImages
     fprintf('    image %i out of %i \n', img, numImages);
     for s = 1:numScales
         for o = 1:numOrientations
-            filterThis = imresize(data{img},[35,29]);
-            filteredData{img,s,o} = abs(double(...
-                imfilter(filterThis, gabor{s,o}, 'replicate', 'conv')));
+            filteredData{img,s,o} = abs(double(imresize(imfilter(data{img}, gabor{s,o}/256, 'replicate', 'conv'),[100, multiplier*100])))/(256*(1/(s^2)));
         end
     end
 end

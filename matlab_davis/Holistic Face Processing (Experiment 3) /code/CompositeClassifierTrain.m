@@ -1,7 +1,7 @@
 function[] = CompositeClassifierTrain(numIter)
-savePath = '/Users/Davis/Desktop/garyComposite/params/networkparams.mat'; %here is where we will save the learned parameters.
+savePath = '/Users/Davis/Desktop/garyComposite_Experiment_3/params/networkparams_final.mat'; %here is where we will save the learned parameters.
 
-params = load('/Users/Davis/Desktop/garyComposite/params/preprocessparams.mat');
+params = load('/Users/Davis/Desktop/garyComposite_Experiment_3/params/preprocessparams_final.mat');
 trainData = params.trainPCA;
 trainLabels = params.trainLabels;
 validData = params.validPCA;
@@ -9,33 +9,22 @@ validLabels = params.validLabels;
 testData = params.testPCA;
 testLabels = params.testLabels;
 trainNames = params.trainNames;
-testNames = params.testNames;
-validNames = params.validNames;
-%% upload confusion matrix
+
 [hCM] = importConfMatrix(trainNames);
 
 
-%% set up network
-
 fprintf('setting up network... \n');
+
 inlen = size(trainData,1);
 numTrainImages = size(trainData,2);
 numTestImages = size(testData, 2);
 numValidImages = size(validData, 2);
 
-maxim = 0;
-for i = 1:size(testLabels,2)
-    curr = testLabels{i};
-    if curr>maxim
-        maxim = curr;
-    end 
-end
-
-targlen = maxim;
+targlen = 3+10; %3 emotions and 10 identities
                
 weights = (normrnd(0,1/sqrt(inlen),[targlen,inlen]));   %randomized weight matrix for hidden layer to output layer
 bias = ones(targlen,1)*0.5;                             %bias weight matrix
-learn = 0.00001;
+learn = 0.00005;
 
 a = .9;         %momentum constant
 lambda = 0.3;   %weight decay constant
@@ -67,10 +56,7 @@ while run
     trainError = 0;
     validWrong = 0;
     testWrong = 0;
-    
-    %CONFUSION MATRIX STUFF
     confusionDist = 0;
-    
     affectWrong = zeros(2,7);
 
     if(mod(epoch,show) ==0)
@@ -80,12 +66,12 @@ while run
     %% do SGD for training images
     for i = randperm(numTrainImages)
         dist = 0;
-        
-        name = trainNames{i};
         input = trainData(:,i);
+        name = trainNames{i};
         
         targ = zeros(targlen,1);
-        targ(trainLabels{i}) = 1; %set up target
+        targ(trainLabels{i}(1)) = 1;    %set up target person
+        targ(trainLabels{i}(2)+10) = 1;  %emotion
 
         %forward propagate function
 
@@ -115,18 +101,14 @@ while run
         CrossEntropyCost = (-1/numTrainImages)*sum(targ.*log(out)+(1-targ).*log(1-out));
         
         trainError = trainError + CrossEntropyCost; 
-        
         % find confusion matrix distance
         for i = 1:size(hCM,1)
-            if(strcmp(name(1:size(name,2)-4),hCM{i}(1:size(hCM{i,1},2))))
-                out(5) = [];
-                
+            if(strcmp(name(1:size(name,2)-4),hCM{i}(1:size(hCM{i,1},2))))               
                 dist = sum((out' - hCM{i,2}).^2);
             end
         end
 
         confusionDist = confusionDist + dist;
-        
         
     end
     
@@ -137,7 +119,7 @@ while run
         end
     end
     prevDist = confusionDist;  
-        
+    
     %% print training error
     Error = [Error, trainError];
     if (mod(epoch,show) == 0)
@@ -161,7 +143,7 @@ while run
     end
     
    
- %% forward propagate and find out test error
+ %% forwad propagate and find out test error
 
     for i = randperm(numTestImages)
         wrong = feedforwards(weights, bias, testData(:,i), testLabels{i}, 0);
@@ -188,25 +170,24 @@ while run
     %1= afraid, 2=angry, 3=disgusted, 4=happy, 5=neutral , 6=sad,
     %7=surprised
     if (mod(epoch,show)==0)
-       fprintf('    CONFUSION METRIC: %f \n', confusionDist); 
-        
-       fprintf('    AFRAID_TOP_ERROR: %%%f \n', affectWrong(1,1));
-       fprintf('    AFRAID_BOT_ERROR: %%%f \n', affectWrong(2,1));
+       normal=(numTestImages/(6*100));
+       fprintf('    AFRAID_TOP_ERROR: %%%f \n', affectWrong(1,1)/normal);
+       fprintf('    AFRAID_BOT_ERROR: %%%f \n', affectWrong(2,1)/normal);
        
-       fprintf('    ANGRY_TOP_ERROR: %%%f \n', affectWrong(1,2));
-       fprintf('    ANGRY_BOT_ERROR: %%%f \n', affectWrong(2,2));
+       fprintf('    ANGRY_TOP_ERROR: %%%f \n', affectWrong(1,2)/normal);
+       fprintf('    ANGRY_BOT_ERROR: %%%f \n', affectWrong(2,2)/normal);
        
-       fprintf('    DISGUSTED_TOP_ERROR: %%%f \n', affectWrong(1,3));
-       fprintf('    DISGUSTED_BOT_ERROR: %%%f \n', affectWrong(2,3));
+       fprintf('    DISGUSTED_TOP_ERROR: %%%f \n', affectWrong(1,3)/normal);
+       fprintf('    DISGUSTED_BOT_ERROR: %%%f \n', affectWrong(2,3)/normal);
        
-       fprintf('    HAPPY_TOP_ERROR: %%%f \n', affectWrong(1,4));
-       fprintf('    HAPPY_BOT_ERROR: %%%f \n', affectWrong(2,4));
+       fprintf('    HAPPY_TOP_ERROR: %%%f \n', affectWrong(1,4)/normal);
+       fprintf('    HAPPY_BOT_ERROR: %%%f \n', affectWrong(2,4)/normal);
        
-       fprintf('    SAD_TOP_ERROR: %%%f \n', affectWrong(1,6));
-       fprintf('    SAD_BOT_ERROR: %%%f \n', affectWrong(2,6));
+       fprintf('    SAD_TOP_ERROR: %%%f \n', affectWrong(1,6)/normal);
+       fprintf('    SAD_BOT_ERROR: %%%f \n', affectWrong(2,6)/normal);
        
-       fprintf('    SURPRISED_TOP_ERROR: %%%f \n', affectWrong(1,7));
-       fprintf('    SURPRISED_BOT_ERROR: %%%f \n', affectWrong(2,7));
+       fprintf('    SURPRISED_TOP_ERROR: %%%f \n', affectWrong(1,7)/normal);
+       fprintf('    SURPRISED_BOT_ERROR: %%%f \n', affectWrong(2,7)/normal);
        
        
     end
@@ -224,6 +205,8 @@ while run
     end
 
 end
+
+
 
 
 

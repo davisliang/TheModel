@@ -22,6 +22,8 @@ for i = 1:length(files)
         predata_1 = rgb2gray(predata_1); %if we have RGB channels, greyscale it.
     end
     
+    %no downsampling of data & we preserve the size proportions
+    
     data{i} = predata_1;
 end
 

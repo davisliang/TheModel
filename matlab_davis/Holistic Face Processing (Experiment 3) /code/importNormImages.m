@@ -2,7 +2,7 @@ function [data, labels, name] = importNormImages(dataPath, dataType)
 % loads image data with it's specified data matrix, label, and name.
 % @author Davis Liang
 % @version 1.0
-% date: 7/13/15
+% date: 1/11/16
 
 display('    importing images');
 cd(dataPath); %datapath is the directory that holds all the image files.
@@ -21,6 +21,8 @@ for i = 1:length(files)
     if size(predata_1,3) == 3
         predata_1 = rgb2gray(predata_1); %if we have RGB channels, greyscale it.
     end
+    
+    %no downsampling of data & we preserve the size proportions
     
     data{i} = predata_1;
 end
